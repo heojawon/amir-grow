@@ -1,97 +1,678 @@
 <!doctype html>
-<html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>지원 종료</title>
+<html>
+    <head>
+        <title>아미르 키우기</title>
+        <style>
+            html,
+            body {
+                touch-action: manipulation;
+            }
+
+            * {
+                user-select: none;
+                font-family: Arial, Helvetica, sans-serif;
+                -webkit-user-drag: none;
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            body {
+                background: #f4f4f4;
+                text-align: center;
+            }
+            /* 토글 버튼 */
+            .toggle-btn {
+                position: absolute;
+                left: 10px;
+                top: 10px;
+                padding: 8px 12px;
+                background: #4caf50;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                transition:
+                    background 0.2s ease-in-out,
+                    transform 0.1s ease-out;
+            }
+            .toggle-btn:hover {
+                transform: scale(1.05);
+            }
+            .toggle-btn.off {
+                background: #f44336;
+            }
+            /* 제목 스타일 */
+            h1 {
+                font-size: 50px;
+                color: #333;
+                margin: 10px 0;
+            }
+            /* 클릭 가능한 이미지 */
+            #amir {
+                width: 200px;
+                height: 200px;
+                cursor: pointer;
+                transition: transform 0.1s ease-out;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            }
+            #amir:hover {
+                transform: scale(1.1);
+            }
+            /* 점수 및 상태 표시 */
+            #strength,
+            #click-power {
+                font-size: 1.5rem;
+                font-weight: bold;
+                margin: 10px 0;
+                color: #444;
+            }
+            /* 상점 */
+            #shop {
+                background: white;
+                border-radius: 10px;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+                padding: 20px;
+                width: 80%;
+                margin: 20px auto;
+            }
+
+            /* 상점 이름 */
+            #shopname {
+                font-size: 1.8rem;
+                color: #222;
+                margin-bottom: 20px;
+            }
+            /* 상점 아이템 */
+            .shop-item {
+                border: 1px solid #ccc;
+                border-radius: 10px;
+                padding: 15px;
+                margin: 10px;
+                display: inline-block;
+                width: 220px;
+                background: #fff;
+                transition:
+                    transform 0.1s ease-out,
+                    box-shadow 0.2s ease-in-out;
+            }
+            .shop-item:hover {
+                transform: scale(0.95);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            }
+            /* 일반 버튼 */
+            button {
+                padding: 10px 15px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 1rem;
+                transition:
+                    background 0.2s ease-in-out,
+                    transform 0.1s ease-out;
+            }
+            button:hover {
+                transform: scale(0.95);
+            }
+            /* 아미르 게임 버튼 */
+            #amirgame {
+                padding: 10px 15px;
+                border: 2px solid black;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 1rem;
+                transition:
+                    background 0.2s ease-in-out,
+                    transform 0.1s ease-out;
+            }
+            #amirgame:hover {
+                transform: scale(0.95);
+            }
+            /* 애니메이션 */
+            @keyframes hit {
+                0% {
+                    transform: scale(1);
+                }
+                50% {
+                    transform: scale(0.85);
+                }
+                100% {
+                    transform: scale(1);
+                }
+            }
+            .hit-effect {
+                animation: hit 0.1s ease-out forwards;
+            }
+            @keyframes float-up {
+                0% {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+                100% {
+                    transform: translateY(-30px);
+                    opacity: 0;
+                }
+            }
+            @media (max-width: 768px) {
+                body {
+                    padding: 10px;
+                    font-size: 14px;
+                }
+                h1 {
+                    font-size: 1.8rem;
+                    margin: 15px 0;
+                }
+                #amir {
+                    width: 150px;
+                    height: 150px;
+                    margin: 10px auto;
+                    -webkit-tap-highlight-color: transparent;
+                }
+                #shop {
+                    width: 100%;
+                    padding: 10px;
+                    margin: 10px 0;
+                }
+                .shop-item {
+                    width: 90%;
+                    margin: 8px auto;
+                    padding: 12px;
+                    display: block;
+                }
+                button,
+                #amirgame {
+                    padding: 12px 20px;
+                    font-size: 1.1rem;
+                    min-height: 44px;
+                }
+                #strength,
+                #click-power {
+                    font-size: 1.3rem;
+                    margin: 8px 0;
+                }
+                .hit-effect {
+                    animation-duration: 0.08s;
+                }
+            }
+        </style>
+        <script>
+            // DOMContentLoaded 이벤트 리스너 (중첩 제거)
+            document.addEventListener("DOMContentLoaded", () => {
+                // 초기 변수 (BigInt 사용)
+                let counter = 0n;
+                let clickpower = 1n;
+                let powerpersec = 0n;
+                let isAnimationEnabled = true;
+                let isSoundEnabled = false;
+                // 구매 정보(bought)는 각 카테고리별로 아이템 이름(key)와 구매 횟수(value)만 저장
+                let bought = {
+                    pets: {},
+                    passives: {},
+                    effects: {},
+                };
+
+                // DOM 요소 선택
+                const amir = document.querySelector("#amir");
+                const strength = document.querySelector("#strength");
+                const click_power = document.querySelector("#click-power");
+                const shopdiv = document.querySelector("#shop");
+                const sec_power = document.querySelector("#sec-power");
+
+                // 숫자를 단위별로 변환하는 함수
+                const formatNumber = (num) => {
+                    const units = [
+                        "",
+                        "K",
+                        "M",
+                        "B",
+                        "T",
+                        "Qa",
+                        "Qi",
+                        "아미르",
+                    ]; // 단위 배열
+                    let index = 0;
+                    let bigNum = BigInt(num); // BigInt 사용
+
+                    // 1,000 단위마다 올려서 단위 변환
+                    while (bigNum >= 1000n && index < units.length - 1) {
+                        bigNum /= 1000n;
+                        index++;
+                    }
+
+                    // 1000 미만은 그대로 정수로 출력
+                    return `${bigNum.toString()}${units[index]}`;
+                };
+
+                // 상태 업데이트 함수 (BigInt를 변환하여 출력)
+                const updateStats = () => {
+                    strength.textContent = `아미르의 힘: ${formatNumber(counter)}`;
+                    click_power.textContent = `클릭당 힘: ${formatNumber(clickpower)}`;
+                    sec_power.textContent = `초당 힘: ${formatNumber(powerpersec)}`;
+                };
+
+                let intervalId = null; // 기존 interval을 관리하는 변수
+                // 초당 힘 증가를 관리하는 함수 (powerpersec > 0일 때만)
+                const startPowerIncrement = () => {
+                    if (intervalId) clearInterval(intervalId);
+                    if (powerpersec > 0n) {
+                        intervalId = setInterval(() => {
+                            counter += powerpersec;
+                            updateStats();
+                        }, 1000);
+                    }
+                };
+
+                // function reset() {
+                //   localStorage.clear();
+                // }
+                // reset();
+
+                // 토글 버튼: 애니메이션 on/off (왼쪽 상단에 고정)
+                const toggleBtn = document.createElement("button");
+                toggleBtn.className = "toggle-btn";
+                toggleBtn.textContent = "아미르발광";
+                document.querySelector(".event").appendChild(toggleBtn);
+                toggleBtn.addEventListener("click", () => {
+                    isAnimationEnabled = !isAnimationEnabled;
+                    toggleBtn.textContent = isAnimationEnabled
+                        ? "아미르발광"
+                        : "아미르비발광";
+                    toggleBtn.classList.toggle("off");
+                });
+
+                function saveGame() {
+                    const gameData = {
+                        counter: counter.toString(),
+                        clickpower: clickpower.toString(),
+                        powerpersec: powerpersec.toString(),
+                        bought: JSON.stringify(bought, (key, value) =>
+                            typeof value === "bigint" ? value.toString() : value
+                        ),
+                    };
+
+                    localStorage.setItem("gameSave", JSON.stringify(gameData));
+                }
+
+                function loadGame() {
+                    const savedData = JSON.parse(
+                        localStorage.getItem("gameSave")
+                    );
+                    if (savedData) {
+                        counter = BigInt(savedData.counter);
+                        clickpower = BigInt(savedData.clickpower);
+                        powerpersec = BigInt(savedData.powerpersec);
+                        bought = JSON.parse(savedData.bought, (key, value) =>
+                            /^[0-9]+$/.test(value) ? BigInt(value) : value
+                        );
+                        startPowerIncrement();
+                        updateStats();
+                        console.log("게임 불러오기 완료");
+                    }
+                }
+
+                loadGame(); // 저장된 데이터 불러오기
+
+                // 원본 데이터 객체들
+                const pets = {
+                    조지: {
+                        name: "조지",
+                        img: "https://img5.yna.co.kr/etc/inner/KR/2024/09/14/AKR20240914044100084_03_i_P4.jpg",
+                        description: "조지를 구매해요",
+                        price: 10n,
+                        powerpersec: 1n,
+                        powerperclick: 0n,
+                        story: "오, 조지",
+                    },
+                    우버이츠: {
+                        name: "우버이츠",
+                        img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4L3tw6P2_gkjLBwfCMly4uf8K4Gztc2RwqA&s",
+                        description:
+                            "아미르가 우버 이츠를 사용해 20힘을 1초만에 얻습니다",
+                        price: 1000n,
+                        powerpersec: 20n,
+                        powerperclick: 0n,
+                        story: "남다르게 태어난 아미르는 많은 힘을 얻습니다",
+                    },
+                    아미르_하우스: {
+                        name: "아미르 하우스",
+                        img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcaaaSo3Ws9katdj7vZy7PMaE1JT9R_WaYSw&s",
+                        description: "아미르가 집을 구매합니다",
+                        price: 100000000000n,
+                        powerpersec: 1000n,
+                        powerperclick: 10000n,
+                        story: "싸장님 인도 부자 됐어요",
+                    },
+                    아미르_주니어: {
+                        name: "아미르 주니어",
+                        img: "https://i.namu.wiki/i/aI_C6VBmCe9j5C9smQ5dG_pTCOno4tFq_GwWhphAMCEpjKADhEUKKoDgNVF1yQNxmkLHYmRUqAMYdjceGKyB77W4x1Eej068duixm5rVZnwnLhOKmWbKvapsCvZyWJQFaY2GfOA7IxFxNZQNUqhSeg.webp",
+                        description: "아미르의 아들을 구매합니다.",
+                        price: 1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000n,
+                        powerpersec: 1n,
+                        powerperclick: 1n,
+                        story: "그건 과학적으로 불가능해 아미르",
+                    },
+                };
+                const passives = {
+                    더남달라지기: {
+                        name: "더남달라지기",
+                        img: "https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcS6XbJt5t72Lo7pDaWaXs3kyFzBK2_eqw_nCVMrpMk-uKQn7tup",
+                        description: "더욱 더 남달라집니다.",
+                        price: 500n,
+                        powerpersec: 0n,
+                        powerperclick: 5n,
+                        story: "더 남달라질 수 있어요 싸장님",
+                    },
+                    아미르_마마: {
+                        name: "아미르 마마",
+                        img: "https://cdn.discordapp.com/attachments/1277181281184120832/1335898510251266048/1085C55D-E744-4F59-A849-65DDB9A96F07.png?ex=67a1d7f0&is=67a08670&hm=a70abea3c73694e88f5a6beef7be74a70db3321d591b92900727a21b487a94f3&",
+                        description: "아미르의 엄마를 구매합니다",
+                        price: 5000n,
+                        powerpersec: 0n,
+                        powerperclick: 10000n,
+                        story: "마마커리 먹고싶어요 싸장님",
+                    },
+                };
+                const effects = {
+                    너무매우더남달라지기: {
+                        name: "너무너무매우더남달라지기포션",
+                        description:
+                            "너무너무매우더남달라지기 포션을 섭취합니다.<br>(이 효과는 도움기계에도 적용됩니다.)",
+                        price: 500n,
+                        powerpersec: 0n,
+                        powerperclick: 5n,
+                        avisec: 30,
+                        story: "조지 너도 남달라질수 있어",
+                    },
+                };
+                setTimeout(setInterval(saveGame, 1000), 3000);
+
+                // shop 객체: 아이템 추가 함수 (세 번째 인자로 카테고리 전달)
+                const shop = {
+                    pet: document.querySelector("#pet"),
+                    passive: document.querySelector("#passive"),
+                    effect: document.querySelector("#effect"),
+                    additem(itemname, shoppath, category) {
+                        const itemElement = document.createElement("div");
+                        itemElement.className = "shop-item";
+                        itemElement.id = itemname.name;
+
+                        const title = document.createElement("h3");
+                        title.textContent = itemname.name;
+                        itemElement.appendChild(title);
+
+                        const img = document.createElement("img");
+                        img.src = itemname.img;
+                        img.style =
+                            "width: 150px; height: 150px; display: flex; justify-content: center;";
+                        itemElement.appendChild(img);
+
+                        const item_count = document.createElement("p");
+                        item_count.textContent = `개수: ${bought[category][itemname.name] ?? 0}`;
+                        itemElement.appendChild(item_count);
+
+                        const description = document.createElement("h4");
+                        description.innerHTML = itemname.description;
+                        itemElement.appendChild(description);
+
+                        const priceandpower = document.createElement("h5");
+                        priceandpower.textContent = `가격: ${itemname.price}힘`;
+                        itemElement.appendChild(priceandpower);
+
+                        const power = document.createElement("h5");
+                        power.textContent = `초당 ${itemname.powerpersec}힘 / 클릭당 ${itemname.powerperclick} 힘`;
+                        itemElement.appendChild(power);
+
+                        if ("avisec" in itemname) {
+                            const effecttime = document.createElement("h5");
+                            effecttime.textContent = `지속시간: ${itemname.avisec}초`;
+                            itemElement.appendChild(effecttime);
+                        }
+
+                        const story = document.createElement("p");
+                        story.textContent = itemname.story;
+                        story.style.fontSize = "15px";
+                        itemElement.appendChild(story);
+
+                        const button = document.createElement("button");
+                        button.textContent = `${itemname.name} 구매하기`;
+                        button.setAttribute("bought", itemname.name);
+                        button.style.backgroundColor = "yellow";
+                        button.className = "buy_button";
+                        itemElement.appendChild(button);
+
+                        // 구매 버튼 클릭 시: 구매 정보 업데이트 및 변수 변경
+                        button.addEventListener("click", () => {
+                            if (counter >= itemname.price) {
+                                // 구매 정보 업데이트 (원본 데이터 기준)
+                                buyItem(itemname, category);
+                                counter -= itemname.price;
+                                clickpower += itemname.powerperclick;
+                                powerpersec += itemname.powerpersec; // 여기서만 초당 힘 추가
+                                item_count.textContent = `개수: ${bought[category][itemname.name] ?? 0}`;
+                                console.log(
+                                    (item_count.textContent = `개수: ${bought[category][itemname.name] ? bought[category][itemname.name] : 0}`)
+                                );
+                                startPowerIncrement();
+                                updateStats();
+                                console.log(`${itemname.name} 구매 완료`);
+                            } else {
+                                // 부족할 경우 처리 (예: 메시지 출력)
+                            }
+                        });
+
+                        shoppath.appendChild(itemElement);
+                        console.log(`${itemname.name} 추가`);
+                    },
+                };
+
+                // function makeAlert() {
+                //   // alert라는 이름 대신 alertDiv 사용 (전역 alert 함수와 충돌 방지)
+                //   const alertDiv = document.createElement("div");
+                //   alertDiv.style.backgroundColor = "red";
+                //   alertDiv.style.padding = "20px";
+                //   alertDiv.style.margin = "20px";
+                //
+                //   // h1 엘리먼트 생성 및 스타일, 텍스트 설정
+                //   const heading = document.createElement("h1");
+                //   heading.style.color = "white";
+                //   heading.textContent = "경고!"; // 원하는 제목을 입력하세요
+                //   alertDiv.appendChild(heading);
+                //
+                //   // p 엘리먼트 생성 및 텍스트 설정
+                //   const paragraph = document.createElement("p");
+                //   paragraph.textContent = "이것은 경고 메시지입니다."; // 원하는 내용을 입력하세요
+                //   paragraph.style.color = "white"; // 텍스트가 보이도록 스타일 추가
+                //   alertDiv.appendChild(paragraph);
+                //
+                //   // 생성한 alertDiv를 문서의 body에 추가
+                //   shopdiv.appendChild(alertDiv);
+                // }
+                //
+                // makeAlert();
+
+                // buyItem 함수: 구매 정보(bought) 업데이트 (카테고리별 count 증가)
+                const buyItem = (item, category) => {
+                    if (counter < item.price) {
+                        shopname.innerHTML =
+                            "<h1 style='color: red'>힘이 부족합니다.</h1>";
+
+                        setTimeout(() => {});
+                        return;
+                    }
+                    if (bought[category][item.name] === undefined) {
+                        bought[category][item.name] = 1n;
+                    } else {
+                        bought[category][item.name] += 1n;
+                    }
+                    console.log("구매 정보 업데이트:", bought);
+                };
+
+                // pets 카테고리 모든 품목 추가
+                for (let key in pets) {
+                    shop.additem(pets[key], shop.pet, "pets");
+                }
+
+                // passives 카테고리 모든 품목 추가
+                for (let key in passives) {
+                    shop.additem(passives[key], shop.passive, "passives");
+                }
+
+                // effects 카테고리 모든 품목 추가
+                for (let key in effects) {
+                    shop.additem(effects[key], shop.effect, "effects");
+                }
+
+                // 아미르 클릭 시: 클릭력만큼 counter 증가 및 hit 애니메이션 적용
+                let isAnimating = false;
+                amir.addEventListener("click", () => {
+                    counter += clickpower;
+                    if (isAnimationEnabled && !isAnimating) {
+                        isAnimating = true;
+                        amir.classList.remove("hit-effect");
+                        void amir.offsetWidth; // 리렌더링 강제
+                        amir.classList.add("hit-effect");
+                        setTimeout(() => {
+                            amir.classList.remove("hit-effect");
+                            isAnimating = false;
+                        }, 100);
+                    }
+                    updateStats();
+                });
+
+                // 토글 버튼: 애니메이션 on/off (왼쪽 상단에 고정)
+                const soundbutton = document.createElement("button");
+                soundbutton.className = "sound-btn toggle-btn";
+                soundbutton.textContent = "아미르소리";
+                soundbutton.style.left = "120px";
+                document.querySelector(".event").appendChild(soundbutton);
+                soundbutton.addEventListener("click", () => {
+                    isAnimationEnabled = !isAnimationEnabled;
+                    soundbutton.textContent = isAnimationEnabled
+                        ? "아미르소리"
+                        : "아미르소리X";
+                    soundbutton.classList.toggle("off");
+                });
+
+                // 아미르 클릭 시: 클릭력만큼 counter 증가 및 hit 애니메이션 적용
+                let isSound = false;
+                amir.addEventListener("click", () => {
+                    if (isSound && !isSound) {
+                        isSound = true;
+                        amir.classList.remove("hit-effect");
+                        void amir.offsetWidth; // 리렌더링 강제
+                        amir.classList.add("hit-effect");
+                        setTimeout(() => {
+                            amir.classList.remove("hit-effect");
+                            isAnimating = false;
+                        }, 100);
+                    }
+                    updateStats();
+                });
+
+                // 최초 상태 업데이트
+                updateStats();
+
+                amir_house = document.getElementById("아미르 하우스");
+                amir_house_settingsbutton = document.createElement("button");
+                amir_house_settingsbutton.textContent = "아미르 집 인테리어";
+                amir_house_settingsbutton.style.border = "1px solid black";
+                amir_house_settingsbutton.style.marginTop = "10px";
+                amir_house.appendChild(amir_house_settingsbutton);
+            });
+        </script>
+    </head>
+    <body>
+        <div class="event">
+            <div
+                id="notice"
+                style="
+                    /* background-color: yellow; */
+                    height: 100px;
+                    padding: 10px;
+                    margin: 10px;
+                    position: relative;
+                    border: 1px solid black;
+                "
+            >
+                <span
+                    >패치 노트: 최적화하고 속도 향상했어요 더욱 더 남달라졌어요
+                    <br />만든 기능은 다음 업데이트에 반영돼요</span
+                >
+                <button
+                    id="close-notice"
+                    style="position: absolute; right: 10px; top: 10px"
+                >
+                    x
+                </button>
+            </div>
+            <script>
+                document
+                    .getElementById("close-notice")
+                    .addEventListener("click", () => {
+                        document.getElementById("notice").style.display =
+                            "none";
+                    });
+            </script>
+        </div>
+        <div class="settings"></div>
+        <h1 align="center">아미르 키우기(진행도 저장 기능 추가)</h1>
+        <p align="center">
+            저희는 이 사진의 주인을 놀릴 목적으로 제작하지 않았습니다.
+        </p>
+        <div class="maingame" align="center">
+            <div class="clicks">
+                <img
+                    src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNvMmPv7u2J36e8wyo4kX5iecOAszXMNDXFg&"
+                    alt="아미르"
+                    id="amir"
+                />
+                <h1 id="strength" style="font-size: 50px">아미르의 힘: 0</h1>
+                <button
+                    id="amirgame"
+                    align="left"
+                    onclick="window.location.href='amir-move.kro.kr'"
+                >
+                    아미르의 배달 게임 시작하기 <strong>(개발중)</strong>
+                </button>
+            </div>
+            <div class="status">
+                <h3 id="click-power">클릭당 힘: 1</h3>
+                <h4 id="sec-power">초당 힘: 0</h4>
+            </div>
+        </div>
+        <hr />
+        <div id="shop">
+            <div id="alerthere"></div>
+            <h1 id="shopname">상점</h1>
+            <hr />
+            <div id="pet">
+                <h1>도움기계</h1>
+            </div>
+            <div id="passive">
+                <h1>패시브</h1>
+            </div>
+            <div id="effect">
+                <h1>효과</h1>
+            </div>
+        </div>
+        <!-- <body>
     <style>
-      @keyframes glitch {
-        0% {
-          transform: translate(0);
+        html,
+        body {
+            background-color: black;
         }
-        20% {
-          transform: translate(-3px, 3px);
-        }
-        40% {
-          transform: translate(3px, -3px);
-        }
-        60% {
-          transform: translate(-3px, -3px);
-        }
-        80% {
-          transform: translate(3px, 3px);
-        }
-        100% {
-          transform: translate(0);
-        }
-      }
-
-      @keyframes flicker {
-        0%,
-        100% {
-          opacity: 1;
-        }
-        50% {
-          opacity: 0.6;
-        }
-      }
-
-      body {
-        background: #111;
-        color: white;
-        font-family: "Arial", sans-serif;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        margin: 0;
-        text-align: center;
-      }
-
-      .message {
-        font-size: 3rem;
-        font-weight: bold;
-        position: relative;
-        text-transform: uppercase;
-        text-shadow:
-          0 0 10px #ff0000,
-          0 0 20px #00ff00,
-          0 0 30px #0000ff;
-        animation:
-          glitch 0.5s infinite alternate,
-          flicker 1s infinite;
-      }
-
-      .message::before,
-      .message::after {
-        content: "이 웹사이트는 지원이 종료된 상태입니다.";
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        background: transparent;
-      }
-
-      .message::before {
-        left: 2px;
-        text-shadow: -2px 0 red;
-        clip-path: inset(0 50% 0 0);
-      }
-
-      .message::after {
-        left: -2px;
-        text-shadow: 2px 0 blue;
-        clip-path: inset(0 0 0 50%);
-      }
     </style>
-  </head>
-  <body>
-    <img
-      class="message"
-      src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNvMmPv7u2J36e8wyo4kX5iecOAszXMNDXFg&"
-      alt=""
-    />
-    <br>
-    <h1 class="mess">이 웹사이트는 지원이 종료된 상태입니다.<h1>
-  </body>
+    <h1
+            style="
+        color: red;
+        text-align: center;
+        line-height: 200px;
+        font-size: 100px;
+      "
+    >
+        서버 점검 중입니다. <br />나중에 다시 시도해 주세요.
+    </h1>
+    <h3 style="color: yellow; text-align: center">
+        현재 서버에 접속할 수 없습니다. 나중에 다시 시도해 주십시오. <br>문제에 관해서는 개발자에게 문의하여 주십시오.
+    </h3>
+    --></body>
 </html>
